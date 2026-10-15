@@ -3,7 +3,31 @@
 Patches the plugin modules so they can be imported both as a package
 (relative imports during plugin loading) and directly during testing.
 """
+import os
 import sys
+
+# est-i9jw isolation guard (module level, deliberately NOT an autouse
+# fixture): an inherited LCM_DATABASE_PATH outranks HERMES_HOME in
+# LCMConfig.from_env() (config.py _EnvFieldSpec -> engine.py
+# _resolve_db_path), so a test process launched with a fake HOME and
+# HERMES_HOME still binds the live production lcm.db at bootstrap.
+# Scrub every LCM_* variable before any plugin submodule is exec'd below
+# (submodule exec happens inside this file) and before any test module is
+# collected; capture the inherited DB path so the regression test can
+# assert no fd ever points at it.
+_INHERITED_LCM_DATABASE_PATH = os.environ.get("LCM_DATABASE_PATH", "")
+# Pre-bootstrap materialization baseline: a sentinel DB that did NOT exist
+# before the scrub must not appear during the run; a pre-existing (e.g.
+# production) inherited DB is judged only by the fd check.
+os.environ["I9JW_EXPECT_DB_EXISTED"] = (
+    "1"
+    if _INHERITED_LCM_DATABASE_PATH
+    and os.path.exists(_INHERITED_LCM_DATABASE_PATH)
+    else "0"
+)
+for _scrub_key in [k for k in os.environ if k.startswith("LCM_")]:
+    del os.environ[_scrub_key]
+
 import importlib
 from pathlib import Path
 
