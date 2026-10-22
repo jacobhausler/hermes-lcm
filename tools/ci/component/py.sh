@@ -17,14 +17,21 @@ fi
 
 export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
 if ! command -v uv >/dev/null 2>&1; then
-  echo "py-hook: uv not found on runner (preinstalled on ubuntu-latest images)" >&2
-  exit 2
+  # Runner image carries no uv: bootstrap it hermetically — own venv, single
+  # sha256-pinned wheel, --require-hashes. From here on every download
+  # (managed interpreters included) is hash-verified.
+  UVV=$(mktemp -d)/uvvenv
+  /usr/bin/python3 -m venv "$UVV"
+  "$UVV/bin/pip" install -q --no-deps --require-hashes -r tools/ci/requirements-uv.lock
+  UV="$UVV/bin/uv"
+else
+  UV=$(command -v uv)
 fi
 
 VENV=$(mktemp -d)/estate-venv
-uv python install -q "$PYV"
-uv venv -q --python "$PYV" "$VENV"
-VIRTUAL_ENV="$VENV" uv pip install -q --python "$VENV/bin/python" --require-hashes -r "$LOCK"
+"$UV" python install -q "$PYV"
+"$UV" venv -q --python "$PYV" "$VENV"
+VIRTUAL_ENV="$VENV" "$UV" pip install -q --python "$VENV/bin/python" --require-hashes -r "$LOCK"
 echo "py-hook: HASH-VERIFY ENABLED (interpreter sha256 + wheels --require-hashes)"
 
 T0=$(date +%s)
