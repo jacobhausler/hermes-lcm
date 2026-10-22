@@ -33,6 +33,7 @@ VENV=$(mktemp -d)/estate-venv
 "$UV" venv -q --python "$PYV" "$VENV"
 VIRTUAL_ENV="$VENV" "$UV" pip install -q --python "$VENV/bin/python" --require-hashes -r "$LOCK"
 echo "py-hook: HASH-VERIFY ENABLED (interpreter sha256 + wheels --require-hashes)"
+"$VENV/bin/python" scripts/validate_dependency_contract.py --report-environment
 
 T0=$(date +%s)
 OUT=$(mktemp)
