@@ -1,0 +1,18 @@
+# est-a83zr revival probe — disposable diagnostic workflow.
+# Proves whether GitHub Actions executes ANY workflow on this re-seeded repo
+# (zero runs since 2026-10-11 despite valid ci.yml + PushEvents to main).
+# Delete in the estate-ci revival PR (S9 gate).
+name: CI revival probe
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "revival-probe est-a83zr ok"
