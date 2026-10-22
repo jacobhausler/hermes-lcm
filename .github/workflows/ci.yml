@@ -1,0 +1,40 @@
+# ci-contract: estate-ci@v1
+# hermes-lcm CI — estate-ci gen-4 contract (NEXTGEN-CI.md (b) lcm row, (e) P2, (g) S9).
+# Revival: replaces the dead 6-job graph (est-a83zr: zero runs ever, zero protection) and
+# replaces the disposable revival probe (deleted in this PR per its own header, S9 gate).
+# Minimal floor/tip py gates: floor python 3.11 / tip python 3.12, both hermes tip —
+# mirrors the canary lcm block (estate-ci@v1 canary.yml); smallest repo of the seven,
+# one component (py), no shards (no timing manifest yet); one leg per arm,
+# lane_cap_s 600 = interim wall budget ((b): recut at first green).
+name: ci
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: write
+  pull-requests: write
+  statuses: write
+
+# Concurrency is CALLER law (estate-ci@v1: reusable-level concurrency self-cancels
+# N caller jobs; measured estate-ci main run 39698266077). Cancel only PR runs.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  gates:
+    name: gates
+    uses: jacobhausler/estate-ci/.github/workflows/estate-ci.yml@v1
+    with:
+      legs: '[{"label":"floor","python":"3.11","hermes_pin":"tip","consumes":["py"]},{"label":"tip","python":"3.12","hermes_pin":"tip","consumes":["py"]}]'
+      components: '["py"]'
+      shards: auto
+      lane_cap_s: 600
+      budget: tests/budget.json
+      paths: default
+      artifact-gate: '{"provenance_dir":"tests/runs","artifact_name":"ledger-lcm","retention_days":90}'
