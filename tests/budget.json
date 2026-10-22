@@ -1,0 +1,6 @@
+{
+  "pr_gate_wall_s": 600,
+  "runner_min_per_pr": 12,
+  "runner_min_wk": 10,
+  "basis": "interim NEXTGEN-CI.md (b) lcm row; S5 basis p95x1.15 recut at first green (est-344pk observe-week)"
+}

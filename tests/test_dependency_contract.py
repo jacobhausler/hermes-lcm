@@ -35,7 +35,7 @@ def test_dependency_contract_validator_accepts_repository():
     )
 
     assert result.returncode == 0, result.stderr
-    assert "dependency contract valid: version 1.0.4" in result.stdout
+    assert "dependency contract valid: version 1.1.0" in result.stdout
     assert "9 external imports declared" in result.stdout
 
 
@@ -940,7 +940,7 @@ def test_contract_records_host_ownership_versions_and_update_owner():
     contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
 
     assert contract["schema_version"] == 1
-    assert contract["contract_version"] == "1.0.4"
+    assert contract["contract_version"] == "1.1.0"
     assert contract["boundary"] == "host-owned"
     assert contract["imported_api_validation"] == "observed-coverage-only"
     assert contract["ownership"]["dependency_resolver"] == "Hermes Agent host environment"
@@ -950,7 +950,7 @@ def test_contract_records_host_ownership_versions_and_update_owner():
         "scanned runtime import, supported Python or Hermes Agent version, or required "
         "imported API changes."
     )
-    assert contract["supported_versions"]["python"] == ["3.11", "3.12", "3.13", "3.14"]
+    assert contract["supported_versions"]["python"] == ["3.11", "3.12"]
     assert contract["supported_versions"]["hermes_agent"] == ">=0.16,<1"
     assert contract["runtime_scan"]["local_imports"] == ["hermes_lcm", "benchmarking"]
     assert set(contract["external_imports"]) == {
@@ -989,11 +989,17 @@ def test_dependency_contract_validation_is_wired_into_ci_and_release_gate():
     ci_workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(
         encoding="utf-8"
     )
+    # estate-ci gen-4: ci.yml is a parameter block, and the component hook it
+    # schedules is where CI actually executes — the validator wiring site.
+    ci_hook = (REPO_ROOT / "tools" / "ci" / "component" / "py.sh").read_text(
+        encoding="utf-8"
+    )
     release_validator = (
         REPO_ROOT / "scripts" / "validate_release.sh"
     ).read_text(encoding="utf-8")
 
-    assert "python scripts/validate_dependency_contract.py" in ci_workflow
+    assert "estate-ci/.github/workflows/estate-ci.yml@v1" in ci_workflow
+    assert "scripts/validate_dependency_contract.py" in ci_hook
     assert (
         'run_gate "dependency contract" "$PYTHON_BIN" '
         "scripts/validate_dependency_contract.py --report-environment"

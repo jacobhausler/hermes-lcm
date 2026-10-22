@@ -599,10 +599,31 @@ def _validate_python_matrix(repo_root: Path, contract: dict[str, Any]) -> list[s
         matrix = matrix_path.read_text(encoding="utf-8")
     except FileNotFoundError:
         return [f"Python CI matrix file not found: {matrix_path_value}"]
-    match = re.search(r"python-version:\s*\[([^\]]+)\]", matrix)
-    if match is None:
-        return [f"could not locate an inline python-version matrix in {matrix_path_value}"]
-    matrix_versions = re.findall(r"[\"'](3\.\d+)[\"']", match.group(1))
+    matrix_versions: list[str] = []
+    inline = re.search(r"python-version:\s*\[([^\]]+)\]", matrix)
+    if inline is not None:
+        matrix_versions = re.findall(r"[\"'](3\.\d+)[\"']", inline.group(1))
+    else:
+        # ci-contract parameter block shape (estate-ci gen-4): the matrix is the
+        # `python` field of each leg arm in the caller's `legs:` knob.
+        for line in matrix.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("legs:"):
+                try:
+                    arms = json.loads(stripped[len("legs:"):].strip().strip("'\""))
+                except ValueError:
+                    return [f"legs knob is not valid JSON in {matrix_path_value}"]
+                if isinstance(arms, list):
+                    matrix_versions = [
+                        str(arm["python"])
+                        for arm in arms
+                        if isinstance(arm, dict) and arm.get("python")
+                    ]
+                break
+        if not matrix_versions:
+            return [
+                f"could not locate a python-version matrix (inline or ci-contract legs) in {matrix_path_value}"
+            ]
     if matrix_versions != versions:
         errors.append(
             "supported Python versions do not match CI matrix: "
